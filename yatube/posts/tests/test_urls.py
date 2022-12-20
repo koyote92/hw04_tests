@@ -7,8 +7,8 @@ from ..models import Post, Group
 User = get_user_model()
 
 # Не знаю, насколько правильно я делаю, используя одного автора с тестовыми
-# постом и группой в setUpClass, а второго в setUp. Но для тестов в любом случае
-# нужны были двое.
+# постом и группой в setUpClass, а второго в setUp. Но для тестов в любом
+# случае нужны были двое.
 
 
 class PostsURLTests(TestCase):
@@ -69,9 +69,7 @@ class PostsURLTests(TestCase):
     def test_authorized_pages_url_exists_at_desired_location(self):
         """Проверка доступа к страницам с использованием авторизации
         (все пользователи)."""
-        authorized_pages_urls = (
-            '/create/',
-            )
+        authorized_pages_urls = ('/create/',)
         for item in authorized_pages_urls:
             response = self.authorized_client.get(item)
             with self.subTest(item=item):

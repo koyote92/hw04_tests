@@ -1,7 +1,6 @@
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from ..forms import PostForm
 from ..models import Post, Group
 
 User = get_user_model()
@@ -36,15 +35,13 @@ class PostFormTests(TestCase):
             'text': 'Тестовый текст формы',
             'group__title': 'Тестовая группа',
         }
-        response = authorized_client.post(reverse('posts:post_create'),
-                                          data=form_data)
-        self.assertEqual(posts_count+1, Post.objects.count())
-        self.assertTrue(
-           Post.objects.filter(
-                text='Тестовый текст',
-                group__title='Тестовая группа',
-            ).exists()
-        )
+        authorized_client.post(reverse('posts:post_create'), data=form_data)
+        self.assertEqual(posts_count + 1, Post.objects.count())
+        self.assertTrue(Post.objects.filter(
+            text='Тестовый текст',
+            group__title='Тестовая группа',
+        ).exists()
+                        )
 
     def test_clean_text(self):
         authorized_client = PostFormTests.authorized_client

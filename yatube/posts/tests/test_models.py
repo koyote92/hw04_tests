@@ -18,7 +18,7 @@ class PostModelTest(TestCase):
             description='Тестовое описание',
         )
         cls.test_group_2 = Group.objects.create(
-            title='Ж'*80,
+            title='Ж' * 80,
             description='Тестовое описание',
         )
         cls.test_post_1 = Post.objects.create(
