@@ -50,7 +50,8 @@ class PostsPagesTests(TestCase):
                 'posts:post_update',
                 kwargs={'post_id': 1},
             ),
-            'posts/create_post.html': reverse('posts:post_create'),
+            # 'posts/create_post.html': reverse('posts:post_create'),
+            # PEP воняет на повторяющийся key
         }
         for template, reverse_name in templates_pages_names.items():
             with self.subTest(reverse_name=reverse_name):
@@ -74,10 +75,10 @@ class PostsPagesTests(TestCase):
         # self.assertEqual(post_slug_0, 'test-slug')
         self.assertIn('page_obj', response.context)
 
-    # Я вообще не понимаю, что мы проверяем. Вернее не так, я понимаю, что у нас
-    # в context уходит то, что написано во views.py в каждой вьюхе. Но ты бы
-    # видел проект для примера. Как обычно, "а сделаем мы пример СОВСЕМ не такой
-    # как в живом проекте, а чё такого?" У них даже context во вью не
+    # Я вообще не понимаю, что мы проверяем. Вернее не так, я понимаю, что у
+    # нас в context уходит то, что написано во views.py в каждой вьюхе. Но ты
+    # бы видел проект для примера. Как обычно, "а сделаем мы пример СОВСЕМ не
+    # такой как в живом проекте, а чё такого?" У них даже context во вью не
     # используется.
     # Ты меня извини, но я тесты вьюх сделаю по-максимуму на отъебись из-за
     # отстутствия нормального примера.
@@ -152,6 +153,8 @@ class PostsPagesTests(TestCase):
 # объектов Post, а затем проверить, сколько записей передаётся на страницу в
 # словаре context. Объектов в фикстурах должно быть больше, чем выводится на
 # одну страницу паджинатора."
+
+
 class PaginatorViewsTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -259,7 +262,10 @@ class PaginatorViewsTestCase(TestCase):
         }
         for address, kwargs in pages_tested.items():
             with self.subTest(address=address, kwargs=kwargs):
-                response = authorized_client.get(reverse(address, kwargs=kwargs))
+                response = authorized_client.get(reverse(
+                    address,
+                    kwargs=kwargs
+                ))
                 self.assertEqual(len(response.context['page_obj']), 10)
 
     def test_second_pages_with_paginator_contains_three_records(self):
@@ -271,12 +277,15 @@ class PaginatorViewsTestCase(TestCase):
         }
         for address, kwargs in pages_tested.items():
             with self.subTest(address=address, kwargs=kwargs):
-                response = authorized_client.get(reverse(address,kwargs=kwargs)
-                                                 + '?page=2')
+                response = authorized_client.get(reverse(
+                    address,
+                    kwargs=kwargs
+                ) + '?page=2')
                 self.assertEqual(len(response.context['page_obj']), 3)
 
 # И снова теория
-# "Проверьте, что если при создании поста указать группу, то этот пост появляется
+# "Проверьте, что если при создании поста указать группу, то этот
+# пост появляется
 # на главной странице сайта,
 # на странице выбранной группы,
 # в профайле пользователя.

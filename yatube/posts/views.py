@@ -5,7 +5,6 @@ from django.contrib import messages
 from .forms import PostForm
 from .models import Post, Group, User
 from .utils import paginate_page
-from . import settings
 
 
 def index(request):
