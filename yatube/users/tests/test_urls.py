@@ -87,7 +87,6 @@ class UsersURLTests(TestCase):
         """Проверка редиректов неавторизованных пользователей со страниц,
         доступных только авторизованным пользователям."""
         auth_pages_urls_redirects_unauthorized = {
-            '/auth/logout/': '/auth/login/?next=/auth/logout/',
             '/auth/password_change/':
                 '/auth/login/?next=/auth/password_change/',
             '/auth/password_change/done/':
