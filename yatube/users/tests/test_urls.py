@@ -4,13 +4,6 @@ from http import HTTPStatus as status_code  # Использую согласн�
 
 User = get_user_model()
 
-# Я хотел сделать здесь адекватную проверку урлов, но решил проблему лишь
-# частично. Неавторизованные пользователи не могут ползать по страницам
-# типа /password_change/ или /password_reset/done/, а вот авторизованный
-# может зайти на /password_change/done/, /password_reset/done/,
-# /password_reset/complete/, /signup/ и я чёт не могу допереть, как дать к ним
-# доступ только после посещения предыдущей страницы.
-
 
 class UsersURLTests(TestCase):
     def setUp(self):
@@ -59,11 +52,8 @@ class UsersURLTests(TestCase):
         for item in authorized_pages_urls:
             response = self.authorized_client.get(item)
             with self.subTest(item=item):
-                if response.status_code == 302:
-                    print(f'\n{response}')
                 self.assertEqual(response.status_code, status_code.OK)
 
-    # А тут закоменченные урлы якобы не используют никакие шаблоны.
     def test_authorized_pages_url_uses_correct_template(self):
         """Проверка доступа к страницам с использованием авторизации
         (все пользователи)."""

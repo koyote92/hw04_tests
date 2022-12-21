@@ -30,23 +30,26 @@ class PostModelTest(TestCase):
             text='Тестовый пост и немного дополнительных символов',
         )
 
-    def test_models_have_correct_object_names(self):
-        """Проверяем __str__ у моделей Post и Group."""
-        post = PostModelTest.test_post_1
-        expected_object_name = post.text[:settings.SELF_TEXT_LENGTH]
-        self.assertEqual(expected_object_name, str(post))
-
-        post = PostModelTest.test_post_2
-        expected_object_name = post.text[:settings.SELF_TEXT_LENGTH]
-        self.assertEqual(expected_object_name, str(post))
-
-        group = PostModelTest.test_group_1
-        expected_object_name = group.title
-        self.assertEqual(expected_object_name, str(group))
-
-        group = PostModelTest.test_group_2
-        expected_object_name = group.title
-        self.assertEqual(expected_object_name, str(group))
+    # Это тест из теории. Типа "правильно ли будет отображаться __str__
+    # у создаваемых объектов. Ну и плюс это был самый первый тест, где я ещё
+    # не добрался до subTest.
+    # def test_models_have_correct_object_names(self):
+    #     """Проверяем __str__ у моделей Post и Group."""
+    #     post = PostModelTest.test_post_1
+    #     expected_object_name = post.text[:settings.SELF_TEXT_LENGTH]
+    #     self.assertEqual(expected_object_name, str(post))
+    #
+    #     post = PostModelTest.test_post_2
+    #     expected_object_name = post.text[:settings.SELF_TEXT_LENGTH]
+    #     self.assertEqual(expected_object_name, str(post))
+    #
+    #     group = PostModelTest.test_group_1
+    #     expected_object_name = group.title
+    #     self.assertEqual(expected_object_name, str(group))
+    #
+    #     group = PostModelTest.test_group_2
+    #     expected_object_name = group.title
+    #     self.assertEqual(expected_object_name, str(group))
 
     def test_post_verbose_names(self):
         """verbose_name в полях модели post совпадает с ожидаемым."""

@@ -1,158 +1,127 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
-from django import forms
 
 from ..models import Post, Group
 
 User = get_user_model()
+
+# А ты имеешь доступ к теории яндекса вообще, смотрел её? В моделях и урлах
+# всё понятно, доходим до вьюх и БАХ! Всё, как будто составителя теории сменили
 
 
 class PostsPagesTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.test_author = User.objects.create_user(
-            username='test-username',
-            email='test@example.com',
-        )
-        cls.authorized_client = Client()
-        cls.authorized_client.force_login(cls.test_author)
         cls.test_group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
             description='Тестовое описание',
         )
+        # Снова ситуация, если не буду создавать тестового юзера (автора)
+        # здесь, то база скажет "NOT NULL constraint failed." Тестовый пост в
+        # setUp или оставить здесь вместе с юзером-заглушкой? Проверять всё
+        # равно всё буду юзером из setUp.
+        cls.test_user = User.objects.create_user(
+            username='test-username'
+        )
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.test_user)
         cls.test_post = Post.objects.create(
-            id=1,
             text='Тестовый текст',
-            author=cls.test_author,
+            author=cls.test_user,
             group=cls.test_group,
         )
 
-    def test_pages_uses_correct_templates(self):
+        cls.url_index = reverse('posts:index')
+        cls.url_group = reverse(
+            'posts:group',
+            kwargs={'slug': 'test-slug'},
+        )
+        cls.url_profile = reverse(
+            'posts:profile',
+            kwargs={'username': 'test-username'},
+        )
+        cls.url_post_details = reverse(
+            'posts:post_details',
+            kwargs={'post_id': 1},
+        )
+        cls.url_post_create = reverse('posts:post_create')
+        cls.url_post_update = reverse(
+            'posts:post_update',
+            kwargs={'post_id': 1},
+        )
+
+    def setUp(self):
+        self.guest_client = Client()
+        self.user = User.objects.create_user(username='test-user')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.user)
+
+    def test_pages_uses_correct_templates(self):  # Здесь нужен юзер-автор.
         authorized_client = PostsPagesTests.authorized_client
         templates_pages_names = {
-            'posts/index.html': reverse('posts:index'),
-            'posts/group_list.html': reverse(
-                'posts:group',
-                kwargs={'slug': 'test-slug'},
-            ),
-            'posts/profile.html': reverse(
-                'posts:profile',
-                kwargs={'username': 'test-username'},
-            ),
-            'posts/post_details.html': reverse(
-                'posts:post_details',
-                kwargs={'post_id': 1},
-            ),
-            'posts/create_post.html': reverse(
-                'posts:post_update',
-                kwargs={'post_id': 1},
-            ),
-            # 'posts/create_post.html': reverse('posts:post_create'),
-            # PEP воняет на повторяющийся key
+            self.url_index: 'posts/index.html',
+            self.url_group: 'posts/group_list.html',
+            self.url_profile: 'posts/profile.html',
+            self.url_post_details: 'posts/post_details.html',
+            self.url_post_create: 'posts/create_post.html',  # Тупанул с key.
+            self.url_post_update: 'posts/create_post.html',
         }
-        for template, reverse_name in templates_pages_names.items():
+        for reverse_name, template in templates_pages_names.items():
             with self.subTest(reverse_name=reverse_name):
                 response = authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
-    # Нихера не понял с этим тестом. Проверить словарь context? У нас ведь
-    # объекты пагинатора приезжают. Мне проверить, приезжает ли объект
-    # пагинатора? Если да, то в последней строке проверяю через assertIn
     def test_index_page_show_correct_context(self):
-        authorized_client = PostsPagesTests.authorized_client
-        response = authorized_client.get(reverse('posts:index'))
-        # first_object = response.context['page_obj'][0]
-        # post_text_0 = first_object.text
-        # post_author_0 = first_object.author.username
-        # post_group_0 = first_object.group.title
-        # post_slug_0 = first_object.group.slug
-        # self.assertEqual(post_text_0, 'Тестовый текст')
-        # self.assertEqual(post_author_0, 'test-username')
-        # self.assertEqual(post_group_0, 'Тестовая группа')
-        # self.assertEqual(post_slug_0, 'test-slug')
+        response = self.authorized_client.get(self.url_index)
         self.assertIn('page_obj', response.context)
 
-    # Я вообще не понимаю, что мы проверяем. Вернее не так, я понимаю, что у
-    # нас в context уходит то, что написано во views.py в каждой вьюхе. Но ты
-    # бы видел проект для примера. Как обычно, "а сделаем мы пример СОВСЕМ не
-    # такой как в живом проекте, а чё такого?" У них даже context во вью не
-    # используется.
-    # Ты меня извини, но я тесты вьюх сделаю по-максимуму на отъебись из-за
-    # отстутствия нормального примера.
     def test_group_page_show_correct_context(self):
-        authorized_client = PostsPagesTests.authorized_client
-        response = authorized_client.get(reverse(
-            'posts:group',
-            kwargs={'slug': 'test-slug'},
-        ))
-        # Может быть так? Или assertIsNone, или assertIsInstance? В теории
-        # по-моему дичь какая-то.
+        response = self.authorized_client.get(self.url_group)
         self.assertIn('page_obj', response.context)
         self.assertIn('group', response.context)
         self.assertIn('posts', response.context)
 
-    # Цитирую теорию: "Проверка 2: в шаблон передан правильный контекст
-    # При создании страницы в неё передаётся словарь с контекстом. При
-    # обращении к странице можно получить этот словарь из свойства context
-    # объекта response, после чего проверить содержимое полей словаря
-    # response.context на совпадение с ожидаемым результатом."
-
-    # Я ведь правильно делаю, проверяю содержимое полей словаря
-    # response.context? Меня прям очень смущает теория по вьюхам, будто я не то
-    # делаю.
     def test_profile_page_show_correct_context(self):
-        authorized_client = PostsPagesTests.authorized_client
-        response = authorized_client.get(reverse(
-            'posts:profile',
-            kwargs={'username': self.test_author.username},
-        ))
+        response = self.authorized_client.get(self.url_profile)
         self.assertIn('author', response.context)
         self.assertIn('page_obj', response.context)
 
     def test_post_create_page_show_correct_context(self):
-        authorized_client = PostsPagesTests.authorized_client
-        response = authorized_client.get(reverse('posts:post_create'))
+        response = self.authorized_client.get(self.url_post_create)
         self.assertIn('post', response.context)
         self.assertIn('form', response.context)
 
-        form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get('form').fields.get(value)
-                self.assertIsInstance(form_field, expected)
-
-    def test_post_update_page_show_correct_context(self):
+    def test_post_update_page_show_correct_context(self):  # Здесь тоже.
         authorized_client = PostsPagesTests.authorized_client
-        response = authorized_client.get(reverse(
-            'posts:post_update',
-            kwargs={'post_id': 1},
-        ))
+        response = authorized_client.get(self.url_post_update)
         self.assertIn('post', response.context)
         self.assertIn('form', response.context)
         self.assertIn('is_edit', response.context)
-        # Может форму в отдельном тесте тестировать? Я вообще не понимаю, у нас
-        # есть одна форма на два темплейта, мне надо её тестировать на обоих
-        # темплейтах? Её содержимое ведь не поменяется.
-        form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get('form').fields.get(value)
-                self.assertIsInstance(form_field, expected)
 
-# Снова на всякий цитирую теорию
-# "Для тестирования паджинатора Yatube можно создать в фикстурах несколько
-# объектов Post, а затем проверить, сколько записей передаётся на страницу в
-# словаре context. Объектов в фикстурах должно быть больше, чем выводится на
-# одну страницу паджинатора."
+    def test_created_post_shows_on_different_urls(self):
+        different_urls = (self.url_index, self.url_group, self.url_profile)
+        for item in different_urls:
+            with self.subTest(item=item):
+                response = self.guest_client.get(item)
+                self.assertEqual(
+                    response.context['page_obj'][0].text,
+                    'Тестовый текст',
+                )
+                self.assertEqual(
+                    response.context['page_obj'][0].author.username,
+                    'test-username',
+                )
+                self.assertEqual(
+                    response.context['page_obj'][0].group.title,
+                    'Тестовая группа',
+                )
+    # Тут я не понимаю, почему у меня с nested dictionary вот эта строка
+    # райзит TypeError, поэтому указываю через [0]
+    # self.assertEqual(response.context['page_obj']['object_list'].text,
+    # 'Тестовый текст')
 
 
 class PaginatorViewsTestCase(TestCase):
@@ -161,7 +130,6 @@ class PaginatorViewsTestCase(TestCase):
         super().setUpClass()
         cls.test_author = User.objects.create_user(
             username='test-username',
-            email='test@example.com',
         )
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.test_author)
@@ -171,88 +139,20 @@ class PaginatorViewsTestCase(TestCase):
             description='Тестовое описание',
         )
         # Поехали фикстуры.
-        cls.test_post_1 = Post.objects.create(
-            id=1,
-            text='Тестовый текст1',
+        # А зачем тут bulk_create?
+        # [Post.objects.create(
+        #     text='Тестовый текст ' + str(i),
+        #     author=cls.test_author,
+        #     group=cls.test_group)
+        #     for i in range(13)]
+        # Ну или так.
+        fixtures = [Post(
+            text='Тестовый текст' + str(i),
             author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_2 = Post.objects.create(
-            id=2,
-            text='Тестовый текст2',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_3 = Post.objects.create(
-            id=3,
-            text='Тестовый текст3',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_4 = Post.objects.create(
-            id=4,
-            text='Тестовый текст4',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_5 = Post.objects.create(
-            id=5,
-            text='Тестовый текст5',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_6 = Post.objects.create(
-            id=6,
-            text='Тестовый текст6',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_7 = Post.objects.create(
-            id=7,
-            text='Тестовый текст7',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_8 = Post.objects.create(
-            id=8,
-            text='Тестовый текст8',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_9 = Post.objects.create(
-            id=9,
-            text='Тестовый текст9',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_10 = Post.objects.create(
-            id=10,
-            text='Тестовый текст10',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_11 = Post.objects.create(
-            id=11,
-            text='Тестовый текст11',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_12 = Post.objects.create(
-            id=12,
-            text='Тестовый текст12',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
-        cls.test_post_13 = Post.objects.create(
-            id=13,
-            text='Тестовый текст13',
-            author=cls.test_author,
-            group=cls.test_group,
-        )
+            group=cls.test_group)
+            for i in range(13)]
+        Post.objects.bulk_create(fixtures)
 
-    # Не знаю, насколько правильно я здесь распаковываю словарь и насколько
-    # правильно передаю аргументы в subTest. Да и нужен тут subTest вообще?
-    # Лень было писать по три теста на каждую страницу.
     def test_first_pages_with_paginator_contains_ten_records(self):
         authorized_client = PaginatorViewsTestCase.authorized_client
         pages_tested = {
@@ -282,12 +182,3 @@ class PaginatorViewsTestCase(TestCase):
                     kwargs=kwargs
                 ) + '?page=2')
                 self.assertEqual(len(response.context['page_obj']), 3)
-
-# И снова теория
-# "Проверьте, что если при создании поста указать группу, то этот
-# пост появляется
-# на главной странице сайта,
-# на странице выбранной группы,
-# в профайле пользователя.
-# Проверьте, что этот пост не попал в группу, для которой не был предназначен."
-# Имел я этих теоретиков за отсутствие примера.
