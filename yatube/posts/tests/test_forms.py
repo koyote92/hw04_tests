@@ -37,11 +37,9 @@ class PostFormTests(TestCase):
         }
         authorized_client.post(reverse('posts:post_create'), data=form_data)
         self.assertEqual(posts_count + 1, Post.objects.count())
-        self.assertTrue(Post.objects.filter(
-            text='Тестовый текст',
-            group__title='Тестовая группа',
-        ).exists()
-                        )
+        self.assertTrue(Post.objects.filter(text='Тестовый текст',
+                                            group__title='Тестовая группа',
+                                            ).exists())
 
     def test_clean_text(self):
         authorized_client = PostFormTests.authorized_client
