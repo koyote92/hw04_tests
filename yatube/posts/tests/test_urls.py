@@ -103,7 +103,7 @@ class PostsURLTests(TestCase):
             with self.subTest(value=value):
                 self.assertRedirects(response, expected)
 
-    def test_author_pages_url_exists_at_desired_location(self):
+    def test_author_pages_url_exists_at_desired_location(self):  # Нужен автор.
         """Проверка доступа к страницам с использованием авторизации (страницы
         автора)."""
         test_author = PostsURLTests.authorized_client
@@ -115,7 +115,7 @@ class PostsURLTests(TestCase):
             with self.subTest(value=value):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_author_pages_url_uses_correct_template(self):
+    def test_author_pages_url_uses_correct_template(self):  # Нужен автор.
         """Проверка шаблонов страниц с использованием авторизации (страницы
         автора)."""
         test_author = PostsURLTests.authorized_client

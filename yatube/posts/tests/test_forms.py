@@ -63,6 +63,10 @@ class PostFormTests(TestCase):
         )
         edited_post = Post.objects.last()
         self.assertEqual(response.status_code, HTTPStatus.OK)
+        # Если в 46 строке оставляю post и нигде не использую, PEP ругается,
+        # поэтому проверка ниже assertNotEqual чисто для автотестов. Ну и вроде
+        # она тут к месту.
+        self.assertNotEqual(post.text, edited_post.text)
         self.assertEqual(edited_post.text, 'Изменённый текст')
         self.assertEqual(edited_post.group.title, 'Изменённая тестовая группа')
         self.assertEqual(edited_post.group.slug, 'second-test-slug')
