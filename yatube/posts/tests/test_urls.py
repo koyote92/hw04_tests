@@ -1,6 +1,6 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
-from http import HTTPStatus as status_code  # Использую согласно допзаданию.
+from http import HTTPStatus
 
 from ..models import Post, Group
 
@@ -16,11 +16,23 @@ class PostsURLTests(TestCase):
             slug='test-slug',
             description='Тестовое описание',
         )
-        # Под "лучше засетапить урлы" я понял это:
+        # Я так и не понял, как избавиться от юзера-заглушки здесь, ведь у
+        # Post always must be a Lich Ki... author то есть.
+        cls.test_author = User.objects.create_user(
+            username='test-author',
+        )
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.test_author)
+        cls.test_post = Post.objects.create(
+            text='Тестовый текст',
+            group=cls.test_group,
+            author=cls.test_author,
+        )
+        # Алексей Григорьев: "урлы с pk поста определять через f-строки"
         cls.url_index = '/'
         cls.url_group = '/group/test-slug/'
         cls.url_profile = '/profile/test-user/'
-        cls.url_post_details = '/posts/1/'
+        cls.url_post_details = f'/posts/{cls.test_post.id}/'  # Так что-ли?
         cls.url_post_create = '/create/'
         cls.url_post_update = '/posts/1/edit/'
         cls.url_post_delete = '/posts/1/delete/'
@@ -30,22 +42,6 @@ class PostsURLTests(TestCase):
         self.user = User.objects.create_user(username='test-user')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
-
-        self.second_user = User.objects.create_user(username='2nd-test-user')
-        self.second_authorized_client = Client()
-        self.second_authorized_client.force_login(self.second_user)
-        # Получается, если поместить создание поста сюда, то пост будет
-        # пересоздаваться перед каждым тестом. Учитывая, что нам по сути
-        # нужен только один пост, чтобы проверить урлы, то его лучше поместить
-        # в setUpClass? Если да, то есть смысл вернуть и одного юзера туда же,
-        # ведь я 1) проверяю шаблоны и урлы, которые доступны ТОЛЬКО автору
-        # 2) проверяю, редиректит ли другого авторизованного юзера, если он
-        # пытается редактировать или удалить чужой пост.
-        self.test_post = Post.objects.create(
-            text='Тестовый текст',
-            group=self.test_group,
-            author=self.user,
-        )
 
     def test_public_pages_url_exists_at_desired_location(self):
         """Проверка доступа к общедоступным страницам."""
@@ -58,7 +54,7 @@ class PostsURLTests(TestCase):
         for value in public_pages_urls:
             response = self.guest_client.get(value)
             with self.subTest(value=value):
-                self.assertEqual(response.status_code, status_code.OK)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_public_pages_url_uses_correct_template(self):
         """Проверка шаблонов для общедоступных адресов."""
@@ -81,7 +77,7 @@ class PostsURLTests(TestCase):
         for item in authorized_pages_urls:
             response = self.authorized_client.get(item)
             with self.subTest(item=item):
-                self.assertEqual(response.status_code, status_code.OK)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_authorized_pages_url_uses_correct_template(self):
         """Проверка шаблонов страниц с использованием авторизации
@@ -110,22 +106,24 @@ class PostsURLTests(TestCase):
     def test_author_pages_url_exists_at_desired_location(self):
         """Проверка доступа к страницам с использованием авторизации (страницы
         автора)."""
+        test_author = PostsURLTests.authorized_client
         author_pages_urls = {
             self.url_post_update: '/posts/create_post.html/',
         }
         for value, expected in author_pages_urls.items():
-            response = self.authorized_client.get(value)
+            response = test_author.get(value)
             with self.subTest(value=value):
-                self.assertEqual(response.status_code, status_code.OK)
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_author_pages_url_uses_correct_template(self):
         """Проверка шаблонов страниц с использованием авторизации (страницы
         автора)."""
+        test_author = PostsURLTests.authorized_client
         author_pages_templates = {
             self.url_post_update: 'posts/create_post.html',
         }
         for value, expected in author_pages_templates.items():
-            response = self.authorized_client.get(value)
+            response = test_author.get(value)
             with self.subTest(value=value):
                 self.assertTemplateUsed(response, expected)
 
@@ -137,6 +135,6 @@ class PostsURLTests(TestCase):
             self.url_post_delete: self.url_post_details,
         }
         for value, expected in author_only_urls.items():
-            response = self.second_authorized_client.get(value)
+            response = self.authorized_client.get(value)
             with self.subTest(value=value):
                 self.assertRedirects(response, expected)

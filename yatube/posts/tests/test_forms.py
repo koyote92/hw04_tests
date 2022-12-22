@@ -1,9 +1,8 @@
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from http import HTTPStatus as status_code
+from http import HTTPStatus
 
-from ..forms import PostForm
 from ..models import Post, Group
 
 User = get_user_model()
@@ -22,7 +21,6 @@ class PostFormTests(TestCase):
             'posts:post_update',
             kwargs={'post_id': 1},
         )
-        cls.form = PostForm()
 
     def setUp(self):
         self.guest_client = Client()
@@ -33,16 +31,41 @@ class PostFormTests(TestCase):
     def test_create_post(self):
         form_data = {
             'text': 'Тестовый текст формы',
-            # 'group': self.test_group  # Тут я застрял. Без группы создаётся,
-            # с группой нет. Вживую всё работает. Не понимаю почему.
+            'group': self.test_group.id
         }
         response = self.authorized_client.post(self.url_post_create,
                                                data=form_data, follow=True)
-        post = Post.objects.get(id=1)
-        self.assertEqual(response.status_code, status_code.OK)
+        post = Post.objects.last()
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(1, Post.objects.count())
         self.assertEqual(post.text, 'Тестовый текст формы')
         self.assertEqual(post.author.username, 'test-user')
+        self.assertEqual(post.group.title, 'Тестовая группа')
+
+    def test_edit_post(self):
+        post = Post.objects.create(
+            text='Изначальный текст!!!',
+            author=self.user,
+            group=self.test_group
+        )
+        group = Group.objects.create(
+            title='Изменённая тестовая группа',
+            slug='second-test-slug',
+        )
+        form_data = {
+            'text': 'Изменённый текст',
+            'group': group.id
+        }
+        response = self.authorized_client.post(
+            self.url_post_update,
+            data=form_data,
+            follow=True,
+        )
+        edited_post = Post.objects.last()
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(edited_post.text, 'Изменённый текст')
+        self.assertEqual(edited_post.group.title, 'Изменённая тестовая группа')
+        self.assertEqual(edited_post.group.slug, 'second-test-slug')
 
     def test_clean_text(self):
         form_data = {
@@ -59,15 +82,3 @@ class PostFormTests(TestCase):
             'text',
             'Текст публикации не может быть короче 10 символов.'
         )
-
-    def test_edit_post(self):
-        Post.objects.create(text='Изначальный текст!!!', author=self.user)
-        posts_count = Post.objects.count()
-        form_data = {
-            'text': 'Изменённый текст',
-        }
-        self.authorized_client.post(self.url_post_update, data=form_data)
-        self.assertEqual(posts_count, Post.objects.count())
-        self.assertTrue(Post.objects.filter(text='Изменённый текст').exists())
-        self.assertEqual(Post.objects.get(id=1).text, 'Изменённый текст')
-        # Лучше Equal?

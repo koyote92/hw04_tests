@@ -9,6 +9,11 @@ User = get_user_model()
 # А ты имеешь доступ к теории яндекса вообще, смотрел её? В моделях и урлах
 # всё понятно, доходим до вьюх и БАХ! Всё, как будто составителя теории сменили
 
+# UPD: в комменте выще я имел в виду, что мне твои рекомендации КУДА больше
+# импонируют, чем та теория, которую дают в тексте на сайте. Иногда до такой
+# степени меня доводит теория, что появляется ощущение, будто студента наоборот
+# хотят намеренно запутать.
+
 
 class PostsPagesTests(TestCase):
     @classmethod
@@ -19,10 +24,6 @@ class PostsPagesTests(TestCase):
             slug='test-slug',
             description='Тестовое описание',
         )
-        # Снова ситуация, если не буду создавать тестового юзера (автора)
-        # здесь, то база скажет "NOT NULL constraint failed." Тестовый пост в
-        # setUp или оставить здесь вместе с юзером-заглушкой? Проверять всё
-        # равно всё буду юзером из setUp.
         cls.test_user = User.objects.create_user(
             username='test-username'
         )
@@ -66,7 +67,7 @@ class PostsPagesTests(TestCase):
             self.url_group: 'posts/group_list.html',
             self.url_profile: 'posts/profile.html',
             self.url_post_details: 'posts/post_details.html',
-            self.url_post_create: 'posts/create_post.html',  # Тупанул с key.
+            self.url_post_create: 'posts/create_post.html',
             self.url_post_update: 'posts/create_post.html',
         }
         for reverse_name, template in templates_pages_names.items():
@@ -106,9 +107,14 @@ class PostsPagesTests(TestCase):
         for item in different_urls:
             with self.subTest(item=item):
                 response = self.guest_client.get(item)
+                # print(response.context['page_obj') -> <Page 1 of 1>
+                # print(response.context['page_obj'].__dict__) ->
+                # {'object_list': [<Post: Тестовый текст>], 'number': 1,
+                # 'paginator': <django.core.paginator.Paginator object
+                # at 0x0000022AC0F26D10>}
                 self.assertEqual(
-                    response.context['page_obj'][0].text,
                     'Тестовый текст',
+                    response.context['page_obj'][0].text,
                 )
                 self.assertEqual(
                     response.context['page_obj'][0].author.username,
@@ -138,14 +144,6 @@ class PaginatorViewsTestCase(TestCase):
             slug='test-slug',
             description='Тестовое описание',
         )
-        # Поехали фикстуры.
-        # А зачем тут bulk_create?
-        # [Post.objects.create(
-        #     text='Тестовый текст ' + str(i),
-        #     author=cls.test_author,
-        #     group=cls.test_group)
-        #     for i in range(13)]
-        # Ну или так.
         fixtures = [Post(
             text='Тестовый текст' + str(i),
             author=cls.test_author,
